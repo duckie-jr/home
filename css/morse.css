@@ -16,7 +16,7 @@
   --green:    #4ec98a;
   --red:      #e05c5c;
   --mono:     'Share Tech Mono', monospace;
-  --kb-h:     220px;
+  --kb-h:     240px;
 }
 
 /* ─── Base ───────────────────────────────── */
@@ -484,21 +484,21 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: .5rem;
-  padding: .35rem .75rem;
+  gap: 8px;
+  padding: 8px 12px;
   border-bottom: 1px solid var(--border);
-  min-height: 32px;
+  min-height: 36px;
   overflow: hidden;
 }
 
 .pend-syms  {
-  font-size: 1rem; color: var(--accent);
+  font-size: 16px; color: var(--accent);
   letter-spacing: 3px;
-  min-width: 1.8rem; text-align: right;
+  min-width: 28px; text-align: right;
   overflow: hidden;
 }
-.pend-arrow { font-size: .78rem; color: var(--dim); flex-shrink: 0; }
-.pend-char  { font-size: 1.05rem; color: var(--text); min-width: 1rem; }
+.pend-arrow { font-size: 13px; color: var(--dim); flex-shrink: 0; }
+.pend-char  { font-size: 17px; color: var(--text); min-width: 14px; }
 
 /* Main buttons */
 .kb-main {
@@ -520,17 +520,17 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: .15rem;
-  padding: 1rem 0;
-  min-height: 68px;
+  gap: 4px;
+  padding: 20px 0;
+  min-height: 84px;
   transition: background .07s;
 }
 .kb-btn:active   { background: var(--surface2); }
 .dot-btn:active  { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
 .dash-btn:active { background: color-mix(in srgb, var(--accent) 20%, var(--surface)); }
 
-.kb-sym { font-size: 2rem;   color: var(--accent); line-height: 1; }
-.kb-lbl { font-size: .62rem; color: var(--dim); letter-spacing: 1px; }
+.kb-sym { font-size: 34px; color: var(--accent); line-height: 1; }
+.kb-lbl { font-size: 10px; color: var(--dim); letter-spacing: 1px; }
 
 /* Util row */
 .kb-util {
@@ -547,10 +547,10 @@ body {
   border: none;
   color: var(--dim);
   font-family: var(--mono);
-  font-size: .82rem;
+  font-size: 14px;
   letter-spacing: 1px;
-  padding: .9rem 0;
-  min-height: 52px;
+  padding: 18px 0;
+  min-height: 56px;
   cursor: pointer;
   touch-action: manipulation;
   user-select: none; -webkit-user-select: none;
