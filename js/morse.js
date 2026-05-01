@@ -39,8 +39,7 @@ const DEFAULTS = {
   theme: 'amber', soundOn: true, volume: 80,
   pitch: 680, waveform: 'sine', hapticOn: true,
   letterDelayMs: 1000, autoWordSpace: true,
-  textSize: 'md', showMorse: false,
-  transformPreset: 'upper',
+  textSize: 'md', showMorse: false, keyboardSize: 'md',
 };
 let cfg = { ...DEFAULTS };
 
@@ -320,6 +319,20 @@ function applyShowMorse(isVisible) {
   elNotesMorse.classList.toggle('visible', isVisible);
 }
 
+function applyKeyboardSize(size) {
+  cfg.keyboardSize = size;
+  const keyboard = document.getElementById('keyboard');
+  keyboard.classList.remove('kb-size-sm', 'kb-size-lg');
+  if (size !== 'md') keyboard.classList.add('kb-size-' + size);
+  // Measure the actual rendered keyboard height and update the page bottom padding
+  requestAnimationFrame(() => {
+    document.documentElement.style.setProperty('--kb-h', keyboard.offsetHeight + 'px');
+  });
+  document.querySelectorAll('#kb-size-btns button').forEach(btn =>
+    btn.classList.toggle('on', btn.dataset.kbSize === size)
+  );
+}
+
 // ─── Text transform ────────────────────────────────────────────────────────
 const PRESET_TRANSFORMS = {
   upper:    text => text.toUpperCase(),
@@ -515,6 +528,14 @@ function initSettings() {
     saveCfg();
   });
 
+  // Keyboard size
+  document.getElementById('kb-size-btns').addEventListener('click', e => {
+    const size = e.target.dataset.kbSize;
+    if (!size) return;
+    applyKeyboardSize(size);
+    saveCfg();
+  });
+
   // Reset
   document.getElementById('reset-btn').addEventListener('click', () => {
     cfg = { ...DEFAULTS };
@@ -522,6 +543,7 @@ function initSettings() {
     applyTheme(cfg.theme);
     applyTextSize(cfg.textSize);
     applyShowMorse(cfg.showMorse);
+    applyKeyboardSize(cfg.keyboardSize);
     syncToggles();
     volumeSlider.value     = cfg.volume;
     volumeLabel.textContent = cfg.volume + '%';
@@ -748,6 +770,7 @@ loadCfg();
 applyTheme(cfg.theme);
 applyTextSize(cfg.textSize);
 applyShowMorse(cfg.showMorse);
+applyKeyboardSize(cfg.keyboardSize);
 buildThemeGrid();
 buildReference();
 syncToggles();
