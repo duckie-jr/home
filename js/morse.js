@@ -274,6 +274,7 @@ function refreshNotes() {
   if (!rawText) {
     elNotes.innerHTML        = '<span class="notes-hint">tap the keys below…</span>';
     elNotesMorse.textContent = '';
+    saveSession();
     return;
   }
   const fullTransformed   = applyTransform(rawText);
@@ -283,6 +284,7 @@ function refreshNotes() {
   const afterCursor       = escape(fullTransformed.substring(splitIndex));
   elNotes.innerHTML        = beforeCursor + '<span class="cursor"></span>' + afterCursor;
   elNotesMorse.textContent = outputMorse();
+  saveSession();
 }
 
 function flashRefCard(char) {
@@ -720,6 +722,27 @@ function initCopy() {
   });
 }
 
+// ─── Session persistence ───────────────────────────────────────────────────
+function saveSession() {
+  try {
+    localStorage.setItem('morse-session', JSON.stringify({ entries, cursorPosition }));
+  } catch (_) {}
+}
+
+function loadSession() {
+  try {
+    const stored = localStorage.getItem('morse-session');
+    if (!stored) return;
+    const { entries: savedEntries, cursorPosition: savedCursor } = JSON.parse(stored);
+    if (Array.isArray(savedEntries) && savedEntries.length) {
+      entries.push(...savedEntries);
+      cursorPosition = typeof savedCursor === 'number'
+        ? Math.min(savedCursor, savedEntries.length)
+        : savedEntries.length;
+    }
+  } catch (_) {}
+}
+
 // ─── Boot ──────────────────────────────────────────────────────────────────
 loadCfg();
 applyTheme(cfg.theme);
@@ -735,4 +758,5 @@ initKeyShortcuts();
 initRefToggle();
 initCopy();
 initTransform();
+loadSession();
 refreshNotes();
