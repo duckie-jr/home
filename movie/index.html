@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Jr's Movies</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com"/>
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+  <link rel="stylesheet" href="/src/style.css"/>
+</head>
+<body>
+
+<!-- ══ SHANNON ════════════════════════ -->
+<div id="shannonOverlay" class="hidden">
+  <div class="sh-box">
+    <div class="sh-label">secret</div>
+    <p class="sh-msg">hey baby,<br/>nice to see you logged in!</p>
+    <button id="shannonContinue" class="sh-btn">continue</button>
+  </div>
+</div>
+
+<!-- ══ HEADER ════════════════════════ -->
+<header class="header" id="header">
+  <div class="header-inner">
+    <a class="brand" href="#">Jr's Movies</a>
+
+    <nav class="nav-tabs">
+      <button class="ntab active" data-section="movies">Movies</button>
+      <button class="ntab" data-section="tv">TV Shows</button>
+    </nav>
+
+    <div class="header-right">
+      <!-- Login area -->
+      <div class="login-area" id="loginArea">
+        <div id="loginWidget">
+          <button class="login-btn" id="loginToggleBtn">Login</button>
+          <div class="login-drop hidden" id="loginDropdown">
+            <span class="drop-label">Student ID</span>
+            <input id="loginIdInput" class="drop-input" type="text"
+              inputmode="numeric" maxlength="6" placeholder="000000"
+              autocomplete="off" spellcheck="false"/>
+            <span class="drop-hint">6 digits · Enter to confirm</span>
+            <p class="drop-err hidden" id="loginErr">Must be 6 digits</p>
+          </div>
+        </div>
+        <div id="userWidget" class="hidden">
+          <span class="user-pill" id="userTag">#——</span>
+          <button class="logout-btn" id="logoutBtn">Logout</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- ══ HERO ═══════════════════════════ -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-inner">
+    <h1 class="hero-title">Watch Free Movies &amp; TV Shows</h1>
+    <p class="hero-sub">Thousands of titles streaming instantly — no sign‑up needed.</p>
+    <div class="hero-search">
+      <input id="heroSearch" type="text" placeholder="Search movies, TV shows…" autocomplete="off" spellcheck="false"/>
+      <button id="heroSearchBtn">Search</button>
+    </div>
+    <div class="hero-pills">
+      <button class="hpill active" data-section="movies">Movies</button>
+      <button class="hpill" data-section="tv">TV Shows</button>
+    </div>
+  </div>
+</section>
+
+<!-- ══ MAIN ═══════════════════════════ -->
+<main class="main">
+
+  <!-- Search results -->
+  <section class="section hidden" id="searchSection">
+    <div class="sec-head">
+      <h2 class="sec-title">Results for "<span id="searchQuery"></span>"</h2>
+      <button class="back-btn" id="backBtn">← Back</button>
+    </div>
+    <div class="grid" id="searchGrid"></div>
+  </section>
+
+  <!-- Movies -->
+  <section class="section" id="moviesSection">
+    <div class="sec-head">
+      <h2 class="sec-title">Latest Movies</h2>
+      <div class="pager">
+        <button class="pg-btn" id="moviesPrev" disabled>‹</button>
+        <span class="pg-info" id="moviesPage">1 / —</span>
+        <button class="pg-btn" id="moviesNext">›</button>
+      </div>
+    </div>
+    <div class="grid" id="moviesGrid"></div>
+  </section>
+
+  <!-- TV -->
+  <section class="section hidden" id="tvSection">
+    <div class="sec-head">
+      <h2 class="sec-title">Latest TV Shows</h2>
+      <div class="pager">
+        <button class="pg-btn" id="tvPrev" disabled>‹</button>
+        <span class="pg-info" id="tvPage">1 / —</span>
+        <button class="pg-btn" id="tvNext">›</button>
+      </div>
+    </div>
+    <div class="grid" id="tvGrid"></div>
+  </section>
+
+
+</main>
+
+<!-- ══ FOOTER ════════════════════════ -->
+<footer class="footer">
+  <p>Jr's Movies · Stream anything, instantly.</p>
+</footer>
+
+
+
+<!-- ══ PLAYER ════════════════════════ -->
+<div id="playerModal" class="modal hidden">
+  <div class="modal-box">
+    <div class="modal-head">
+      <span class="modal-title" id="playerTitle">—</span>
+      <button class="modal-close" id="playerClose">✕</button>
+    </div>
+    <div class="player-wrap">
+      <iframe id="playerIframe" src="" frameborder="0" allowfullscreen
+        allow="autoplay; fullscreen; picture-in-picture; encrypted-media"
+        referrerpolicy="no-referrer" loading="eager"></iframe>
+    </div>
+    <div class="modal-bar">
+      <div class="prog-rail"><div class="prog-fill" id="progFill"></div></div>
+      <span class="prog-time" id="progTime">—</span>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>
