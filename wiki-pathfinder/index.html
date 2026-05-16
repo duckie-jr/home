@@ -44,7 +44,13 @@
         <div id="replay-status" class="hidden">Replaying path...</div>
       </div>
       <div id="wiki-view">
-        <div id="wiki-title-bar">Wikipedia</div>
+        <div id="wiki-title-bar">
+          <span id="wiki-title-text">Wikipedia</span>
+          <div id="wiki-search-wrap">
+            <input id="wikiSearch" type="text" placeholder="Search Wikipedia..." autocomplete="off" />
+            <ul class="suggestions" id="wikiSearchSuggestions"></ul>
+          </div>
+        </div>
         <div id="wiki-content"><p style="padding:40px;color:#888">Type an article name above and press Enter, or click Find Path.</p></div>
       </div>
     </div>
