@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Wiki Pathfinder</title>
+  <link rel="stylesheet" href="./style.css" />
+</head>
+<body>
+  <div id="app">
+    <header id="controls">
+      <div class="logo">🌐 Wiki Pathfinder</div>
+      <div class="inputs">
+        <div class="input-group">
+          <label for="startPage">Start Article</label>
+          <input id="startPage" type="text" placeholder="e.g. Cat" autocomplete="off" />
+          <ul class="suggestions" id="startSuggestions"></ul>
+        </div>
+        <span class="arrow">→</span>
+        <div class="input-group">
+          <label for="endPage">Target Article</label>
+          <input id="endPage" type="text" placeholder="e.g. Philosophy" autocomplete="off" />
+          <ul class="suggestions" id="endSuggestions"></ul>
+        </div>
+        <button id="findPathBtn">Find Path</button>
+        <button id="stopBtn" class="hidden">Stop</button>
+      </div>
+      <button id="fullscreenBtn" title="Fullscreen">⛶</button>
+    </header>
+    <div id="main-area">
+      <div id="sidebar" class="hidden">
+        <div id="fwd-status" class="dir-status"><span class="dir-label fwd">⟶ FWD</span><span class="dir-info" id="fwdInfo">waiting</span></div>
+        <div id="bwd-status" class="dir-status"><span class="dir-label bwd">⟵ BWD</span><span class="dir-info" id="bwdInfo">waiting</span></div>
+        <div id="statsText"></div>
+        <div id="you-status" class="hidden">
+          <div class="dir-label you">👤 YOU</div>
+          <span id="youInfo"></span>
+        </div>
+        <div id="path-result" class="hidden">
+          <div id="path-header"></div>
+          <div id="pathSteps"></div>
+        </div>
+        <div id="replay-status" class="hidden">Replaying path...</div>
+      </div>
+      <div id="iframe-wrap">
+        <iframe id="wikiFrame" src="https://en.m.wikipedia.org/wiki/Main_Page"></iframe>
+      </div>
+    </div>
+  </div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>
