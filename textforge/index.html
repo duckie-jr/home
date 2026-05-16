@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" />
+    <link rel="stylesheet" href="./style.css" />
+    <title>TextForge — AI Text Generator</title>
+  </head>
+  <body>
+
+    <!-- Header -->
+    <header>
+      <h1>🔮 TextForge</h1>
+      <p class="tagline">Type a topic. Get generated text — powered by Wikipedia.</p>
+    </header>
+
+    <!-- Curiosity ticker — shows what the brain is reading in the background -->
+    <div class="curiosity-bar">
+      <span class="pulse-dot"></span>
+      <span id="curiosityMsg">Waking up…</span>
+    </div>
+
+    <!-- Stats bar -->
+    <div class="stats-bar">
+      <div class="stat">
+        <span class="stat-value" id="statArticles">0</span>
+        <span class="stat-label">articles learned</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="statStates">0</span>
+        <span class="stat-label">brain states</span>
+      </div>
+      <div class="stat">
+        <span class="stat-value" id="statQueue">0</span>
+        <span class="stat-label">queued topics</span>
+      </div>
+    </div>
+
+    <!-- Main content -->
+    <main>
+      <section class="prompt-section">
+        <label for="promptInput">Enter a topic or prompt</label>
+        <div class="input-row">
+          <input
+            type="text"
+            id="promptInput"
+            placeholder="e.g. black holes, ancient rome, photosynthesis…"
+          />
+          <button id="generateBtn">Generate</button>
+        </div>
+      </section>
+
+      <section class="output-section" id="outputSection">
+        <h2>Generated Report</h2>
+        <div id="outputBox" class="output-box">
+          <p class="placeholder-text">Your comprehensive topic report will appear here… the brain is already learning in the background!</p>
+        </div>
+      </section>
+
+      <section class="status-section">
+        <p id="statusMsg"></p>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer>
+      <p>TextForge &mdash; always curious, always learning from Wikipedia.</p>
+    </footer>
+
+    <script type="module" src="./main.js"></script>
+  </body>
+</html>
