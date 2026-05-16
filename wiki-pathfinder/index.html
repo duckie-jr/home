@@ -29,12 +29,13 @@
     </header>
     <div id="main-area">
       <div id="sidebar" class="hidden">
-        <div id="fwd-status" class="dir-status"><span class="dir-label fwd">⟶ FWD</span><span class="dir-info" id="fwdInfo">waiting</span></div>
-        <div id="bwd-status" class="dir-status"><span class="dir-label bwd">⟵ BWD</span><span class="dir-info" id="bwdInfo">waiting</span></div>
+        <div class="dir-status"><span class="dir-label fwd">⟶ FWD</span><span class="dir-info" id="fwdInfo">waiting</span></div>
+        <div class="dir-status"><span class="dir-label bwd">⟵ BWD</span><span class="dir-info" id="bwdInfo">waiting</span></div>
         <div id="statsText"></div>
         <div id="you-status" class="hidden">
-          <div class="dir-label you">👤 YOU</div>
+          <span class="dir-label you">👤 YOU</span>
           <span id="youInfo"></span>
+          <div id="youPath"></div>
         </div>
         <div id="path-result" class="hidden">
           <div id="path-header"></div>
@@ -42,11 +43,12 @@
         </div>
         <div id="replay-status" class="hidden">Replaying path...</div>
       </div>
-      <div id="iframe-wrap">
-        <iframe id="wikiFrame" src="https://en.m.wikipedia.org/wiki/Main_Page"></iframe>
+      <div id="wiki-view">
+        <div id="wiki-title-bar">Wikipedia</div>
+        <div id="wiki-content"><p style="padding:40px;color:#888">Type an article name above and press Enter, or click Find Path.</p></div>
       </div>
     </div>
   </div>
-  <script type="module" src="./main.js"></script>
+  <script src="./main.js"></script>
 </body>
 </html>
