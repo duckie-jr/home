@@ -20,6 +20,9 @@
   var pathHeader = document.getElementById('path-header');
   var pathSteps = document.getElementById('pathSteps');
   var replayStatus = document.getElementById('replay-status');
+  var wikiSearch = document.getElementById("wikiSearch");
+  var wikiSearchSuggestions = document.getElementById("wikiSearchSuggestions");
+  var wikiTitleText = document.getElementById("wiki-title-text");
 
   var abortController = null;
   var foundPath = null;
@@ -58,7 +61,7 @@
 
   // ── Wiki page renderer ──
   function loadWikiPage(title) {
-    wikiTitleBar.textContent = 'Loading: ' + title + '...';
+    wikiTitleText.textContent = 'Loading: ' + title + '...';
     wikiContent.style.opacity = '0.4';
 
     var url = buildApiUrl({
@@ -68,7 +71,7 @@
 
     return fetch(url).then(function (res) { return res.json(); }).then(function (data) {
       if (!data.parse) {
-        wikiTitleBar.textContent = 'Page not found: ' + title;
+        wikiTitleText.textContent = 'Not found: ' + title;
         wikiContent.innerHTML = '<p style="padding:20px;color:#888">Article not found.</p>';
         wikiContent.style.opacity = '1';
         return null;
@@ -79,7 +82,7 @@
       var resolvedTitle = data.parse.title;
       currentPageTitle = resolvedTitle;
 
-      wikiTitleBar.textContent = resolvedTitle;
+      wikiTitleText.textContent = resolvedTitle;
       wikiContent.innerHTML = html;
       wikiContent.scrollTop = 0;
       wikiContent.style.opacity = '1';
@@ -92,7 +95,7 @@
 
       return resolvedTitle;
     }).catch(function () {
-      wikiTitleBar.textContent = 'Error loading: ' + title;
+      wikiTitleText.textContent = 'Error loading: ' + title;
       wikiContent.style.opacity = '1';
       return null;
     });
@@ -322,6 +325,43 @@
   }
   setupAutocomplete(startPageInput, startSuggestions);
   setupAutocomplete(endPageInput, endSuggestions);
+
+  // ── Wiki in-page search bar ──
+  var wikiSearchTimer = null;
+  wikiSearch.addEventListener("input", function () {
+    clearTimeout(wikiSearchTimer);
+    wikiSearchTimer = setTimeout(function () {
+      fetchSuggestions(wikiSearch.value).then(function (results) {
+        wikiSearchSuggestions.innerHTML = "";
+        if (results.length > 0) {
+          wikiSearchSuggestions.classList.add("active");
+          results.forEach(function (r) {
+            var li = document.createElement("li");
+            li.textContent = r;
+            li.addEventListener("click", function () {
+              wikiSearch.value = "";
+              wikiSearchSuggestions.classList.remove("active");
+              onUserClickedLink(r);
+            });
+            wikiSearchSuggestions.appendChild(li);
+          });
+        } else wikiSearchSuggestions.classList.remove("active");
+      });
+    }, 200);
+  });
+  wikiSearch.addEventListener("blur", function () {
+    setTimeout(function () { wikiSearchSuggestions.classList.remove("active"); }, 200);
+  });
+  wikiSearch.addEventListener("focus", function () {
+    if (wikiSearchSuggestions.children.length > 0) wikiSearchSuggestions.classList.add("active");
+  });
+  wikiSearch.addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && wikiSearch.value.trim()) {
+      wikiSearchSuggestions.classList.remove("active");
+      onUserClickedLink(wikiSearch.value.trim());
+      wikiSearch.value = "";
+    }
+  });
 
   // ── Bidirectional BFS ──
   function findShortestPath(startTitle, endTitleArg) {
