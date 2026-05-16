@@ -23,13 +23,18 @@ const replayStatus = document.getElementById('replay-status');
 let abortController = null;
 let foundPath = null;
 let searchRunning = false;
-
-// Shared search state so the user-tracking can inject into forward BFS
 let forwardParent = null;
 let backwardNext = null;
 let endTitle = null;
 
 const WIKI_API = 'https://en.wikipedia.org/w/api.php';
+const PARALLEL = 6;
+const MAX_FRONTIER = 80; // prune frontier to top-scored pages
+
+// ── Link & category cache ──
+const linkCache = new Map();
+const backlinkCache = new Map();
+const categoryCache = new Map();
 
 function buildApiUrl(params) {
   const url = new URL(WIKI_API);
@@ -51,58 +56,28 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── User navigation detection ──
-// Poll the iframe URL to detect when the human clicks a wiki link.
-// We can't read cross-origin URLs directly, so we detect load events
-// and try to extract the title from the URL via a proxy trick.
-// Fallback: we watch for the iframe 'load' event and try to parse
-// the new URL. Cross-origin blocks reading .contentWindow.location,
-// but we can listen for navigation via the History API trick.
-
 let lastUserTitle = null;
-
-function extractTitleFromUrl(url) {
-  try {
-    const match = url.match(/\/wiki\/([^#?]+)/);
-    if (match) return decodeURIComponent(match[1].replace(/_/g, ' '));
-  } catch {}
-  return null;
-}
-
-// We set the iframe src ourselves, so we know what it should be.
-// If the iframe fires 'load' and we didn't cause it, the user clicked a link.
 let programmaticNavigation = false;
 
 wikiFrame.addEventListener('load', () => {
   if (programmaticNavigation) return;
-  // User navigated — try to figure out where they went by checking
-  // what we can. Since cross-origin blocks .contentWindow.location,
-  // we use the Wikipedia API to check what page they might be on
-  // based on the links of their last known page.
-  if (searchRunning && lastUserTitle) {
-    detectUserNavigation();
-  }
+  if (searchRunning && lastUserTitle) detectUserNavigation();
 });
 
 async function detectUserNavigation() {
-  // We can't read the iframe URL cross-origin, but we can detect
-  // the user clicked something. We fetch the links of their last
-  // known page and check if any connect to the backward set.
   if (!lastUserTitle || !backwardNext || !forwardParent) return;
-
   try {
-    const links = await fetchLinks(lastUserTitle, abortController?.signal);
-    // Check if any of the user's available links hit the backward set
+    const links = await fetchLinksCached(lastUserTitle, abortController?.signal);
     for (const linkTitle of links) {
       if (backwardNext.has(linkTitle) && !forwardParent.has(linkTitle)) {
-        // Inject this into the forward search
         forwardParent.set(linkTitle, lastUserTitle);
-        youInfo.textContent = 'found shortcut via ' + linkTitle;
+        youInfo.textContent = 'shortcut via ' + linkTitle;
       }
     }
   } catch {}
 }
 
-// ── API fetches ──
+// ── API fetches with caching ──
 async function fetchSuggestions(query) {
   if (!query || query.length < 2) return [];
   try {
@@ -111,7 +86,8 @@ async function fetchSuggestions(query) {
   } catch { return []; }
 }
 
-async function fetchLinks(title, signal) {
+async function fetchLinksCached(title, signal) {
+  if (linkCache.has(title)) return linkCache.get(title);
   const allLinks = [];
   let plcontinue = null;
   for (let batch = 0; batch < 2; batch++) {
@@ -127,10 +103,12 @@ async function fetchLinks(title, signal) {
     if (data.continue?.plcontinue) plcontinue = data.continue.plcontinue;
     else break;
   }
+  linkCache.set(title, allLinks);
   return allLinks;
 }
 
-async function fetchBacklinks(title, signal) {
+async function fetchBacklinksCached(title, signal) {
+  if (backlinkCache.has(title)) return backlinkCache.get(title);
   const allLinks = [];
   let blcontinue = null;
   for (let batch = 0; batch < 2; batch++) {
@@ -145,58 +123,90 @@ async function fetchBacklinks(title, signal) {
     if (data.continue?.blcontinue) blcontinue = data.continue.blcontinue;
     else break;
   }
+  backlinkCache.set(title, allLinks);
   return allLinks;
 }
 
-// Fetch links for multiple titles in parallel (batch of up to N concurrent)
-async function fetchLinksParallel(titles, signal, concurrency) {
+async function fetchCategories(title, signal) {
+  if (categoryCache.has(title)) return categoryCache.get(title);
+  try {
+    const params = {
+      action: 'query', titles: title, prop: 'categories',
+      cllimit: '40', clshow: '!hidden', format: 'json'
+    };
+    const res = await fetch(buildApiUrl(params), { signal });
+    const data = await res.json();
+    const pages = data.query?.pages;
+    if (!pages) return [];
+    const pageId = Object.keys(pages)[0];
+    const cats = (pages[pageId].categories || []).map(c => c.title.replace('Category:', '').toLowerCase());
+    categoryCache.set(title, cats);
+    return cats;
+  } catch { return []; }
+}
+
+// ── Parallel fetchers with early exit ──
+async function fetchLinksParallel(titles, signal, pathFoundRef) {
   const results = new Map();
   let index = 0;
   async function worker() {
-    while (index < titles.length) {
-      if (signal.aborted) return;
+    while (index < titles.length && !pathFoundRef.found && !signal.aborted) {
       const currentIndex = index++;
+      if (currentIndex >= titles.length) return;
       const title = titles[currentIndex];
       try {
-        const links = await fetchLinks(title, signal);
-        results.set(title, links);
+        results.set(title, await fetchLinksCached(title, signal));
       } catch (err) {
         if (err.name === 'AbortError' || signal.aborted) return;
         results.set(title, []);
       }
     }
   }
-  const workers = [];
-  for (let i = 0; i < Math.min(concurrency, titles.length); i++) {
-    workers.push(worker());
-  }
-  await Promise.all(workers);
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, titles.length) }, () => worker()));
   return results;
 }
 
-async function fetchBacklinksParallel(titles, signal, concurrency) {
+async function fetchBacklinksParallel(titles, signal, pathFoundRef) {
   const results = new Map();
   let index = 0;
   async function worker() {
-    while (index < titles.length) {
-      if (signal.aborted) return;
+    while (index < titles.length && !pathFoundRef.found && !signal.aborted) {
       const currentIndex = index++;
+      if (currentIndex >= titles.length) return;
       const title = titles[currentIndex];
       try {
-        const links = await fetchBacklinks(title, signal);
-        results.set(title, links);
+        results.set(title, await fetchBacklinksCached(title, signal));
       } catch (err) {
         if (err.name === 'AbortError' || signal.aborted) return;
         results.set(title, []);
       }
     }
   }
-  const workers = [];
-  for (let i = 0; i < Math.min(concurrency, titles.length); i++) {
-    workers.push(worker());
-  }
-  await Promise.all(workers);
+  await Promise.all(Array.from({ length: Math.min(PARALLEL, titles.length) }, () => worker()));
   return results;
+}
+
+// ── Scoring: how promising is a title for reaching the target? ──
+function tokenize(text) {
+  return text.toLowerCase().replace(/[^a-z0-9 ]/g, '').split(/\s+/).filter(w => w.length > 2);
+}
+
+function buildScorer(targetTitle, targetCategories) {
+  const targetWords = new Set(tokenize(targetTitle));
+  const targetCatWords = new Set();
+  for (const cat of targetCategories) {
+    for (const word of tokenize(cat)) targetCatWords.add(word);
+  }
+
+  return function scoreTitle(title) {
+    const words = tokenize(title);
+    let score = 0;
+    for (const word of words) {
+      if (targetWords.has(word)) score += 10;  // shares word with target title
+      if (targetCatWords.has(word)) score += 3; // shares word with target categories
+    }
+    return score;
+  };
 }
 
 function navigateIframe(title) {
@@ -251,7 +261,7 @@ function setupAutocomplete(input, suggestionsEl) {
 setupAutocomplete(startPageInput, startSuggestions);
 setupAutocomplete(endPageInput, endSuggestions);
 
-// ── Bidirectional BFS — parallel fetches ──
+// ── Bidirectional BFS — smart ──
 async function findShortestPath(startTitle, targetTitle) {
   abortController = new AbortController();
   const signal = abortController.signal;
@@ -264,13 +274,13 @@ async function findShortestPath(startTitle, targetTitle) {
   replayStatus.classList.add('hidden');
   youStatus.classList.remove('hidden');
   youInfo.textContent = 'browsing...';
-  fwdInfo.textContent = 'starting';
+  fwdInfo.textContent = 'loading categories...';
   fwdInfo.className = 'dir-info active';
-  bwdInfo.textContent = 'starting';
+  bwdInfo.textContent = 'loading categories...';
   bwdInfo.className = 'dir-info active';
   statsText.textContent = '';
 
-  // Navigate iframe to START page
+  // Navigate iframe to START
   programmaticNavigation = true;
   wikiFrame.src = 'https://en.m.wikipedia.org/wiki/' + encodeURIComponent(startTitle);
   lastUserTitle = startTitle;
@@ -283,6 +293,13 @@ async function findShortestPath(startTitle, targetTitle) {
     return foundPath;
   }
 
+  // Fetch categories for both endpoints to build a scorer
+  const [startCategories, targetCategories] = await Promise.all([
+    fetchCategories(startTitle, signal),
+    fetchCategories(targetTitle, signal)
+  ]);
+  const scoreTitle = buildScorer(targetTitle, targetCategories);
+
   backwardNext = new Map();
   backwardNext.set(targetTitle, null);
   let backwardFrontier = [targetTitle];
@@ -294,15 +311,13 @@ async function findShortestPath(startTitle, targetTitle) {
   let forwardFrontier = [startTitle];
   let forwardDepth = 0;
   let forwardScanned = 0;
-  let pathFound = false;
-  const PARALLEL = 4;
+  const pathFoundRef = { found: false };
 
   function updateStats() {
     statsText.textContent = (forwardScanned + backwardScanned) + ' scanned  (fwd ' + forwardScanned + ' / bwd ' + backwardScanned + ')';
   }
 
   function tryConnect(linkTitle, parentTitle) {
-    // Check if linkTitle hits the backward set
     if (backwardNext.has(linkTitle)) {
       forwardParent.set(linkTitle, parentTitle);
       let walker = linkTitle;
@@ -311,27 +326,27 @@ async function findShortestPath(startTitle, targetTitle) {
         forwardParent.set(nextHop, walker);
         walker = nextHop;
       }
-      pathFound = true;
+      pathFoundRef.found = true;
       return true;
     }
     return false;
   }
 
-  // Backward — full speed, parallel fetches
+  // Backward — full speed, parallel, no scoring needed
   async function expandBackward() {
-    while (backwardFrontier.length > 0 && !pathFound && !signal.aborted) {
+    while (backwardFrontier.length > 0 && !pathFoundRef.found && !signal.aborted) {
       backwardDepth++;
       bwdInfo.textContent = 'd' + backwardDepth + '  (' + backwardFrontier.length + ' pages)';
       updateStats();
 
-      const batchResults = await fetchBacklinksParallel(backwardFrontier, signal, PARALLEL);
+      const batchResults = await fetchBacklinksParallel(backwardFrontier, signal, pathFoundRef);
       const nextLevel = [];
 
       for (const [current, backlinks] of batchResults) {
-        if (pathFound || signal.aborted) return;
+        if (pathFoundRef.found || signal.aborted) return;
         backwardScanned++;
         for (const blTitle of backlinks) {
-          if (pathFound) return;
+          if (pathFoundRef.found) return;
           if (!backwardNext.has(blTitle)) {
             backwardNext.set(blTitle, current);
             nextLevel.push(blTitle);
@@ -342,35 +357,35 @@ async function findShortestPath(startTitle, targetTitle) {
       updateStats();
       if (backwardDepth >= 4) break;
     }
-    bwdInfo.textContent = 'done (' + backwardScanned + ' pages, ' + backwardNext.size + ' known)';
+    bwdInfo.textContent = 'done (' + backwardScanned + ' pgs, ' + backwardNext.size + ' known)';
     bwdInfo.className = 'dir-info done';
     updateStats();
   }
 
-  // Forward — full speed, parallel fetches
+  // Forward — parallel, scored frontier, pruned
   async function expandForward() {
-    while (forwardFrontier.length > 0 && !pathFound && !signal.aborted) {
+    while (forwardFrontier.length > 0 && !pathFoundRef.found && !signal.aborted) {
       forwardDepth++;
       fwdInfo.textContent = 'd' + forwardDepth + '  (' + forwardFrontier.length + ' pages)';
       updateStats();
 
-      const batchResults = await fetchLinksParallel(forwardFrontier, signal, PARALLEL);
+      const batchResults = await fetchLinksParallel(forwardFrontier, signal, pathFoundRef);
       const nextLevel = [];
 
       for (const [current, links] of batchResults) {
-        if (pathFound || signal.aborted) return;
+        if (pathFoundRef.found || signal.aborted) return;
         forwardScanned++;
 
         // Direct hit
         if (links.includes(targetTitle)) {
           forwardParent.set(targetTitle, current);
-          pathFound = true;
+          pathFoundRef.found = true;
           return;
         }
 
-        // Check backward lookup
+        // Check backward set first
         for (const linkTitle of links) {
-          if (pathFound) return;
+          if (pathFoundRef.found) return;
           if (backwardNext.has(linkTitle)) {
             if (tryConnect(linkTitle, current)) return;
           }
@@ -384,7 +399,17 @@ async function findShortestPath(startTitle, targetTitle) {
           }
         }
       }
-      forwardFrontier = nextLevel;
+
+      // ── Smart pruning: score and keep only the most promising pages ──
+      if (nextLevel.length > MAX_FRONTIER) {
+        const scored = nextLevel.map(title => ({ title, score: scoreTitle(title) }));
+        scored.sort((a, b) => b.score - a.score);
+        forwardFrontier = scored.slice(0, MAX_FRONTIER).map(entry => entry.title);
+        fwdInfo.textContent = 'd' + forwardDepth + ' pruned ' + nextLevel.length + '→' + forwardFrontier.length;
+      } else {
+        forwardFrontier = nextLevel;
+      }
+
       updateStats();
       if (forwardDepth > 5) break;
     }
@@ -394,7 +419,7 @@ async function findShortestPath(startTitle, targetTitle) {
 
   searchRunning = false;
 
-  if (pathFound) {
+  if (pathFoundRef.found) {
     const path = [];
     let trace = targetTitle;
     while (trace !== null) {
@@ -405,7 +430,7 @@ async function findShortestPath(startTitle, targetTitle) {
     foundPath = path;
     fwdInfo.textContent = 'done';
     fwdInfo.className = 'dir-info done';
-    bwdInfo.textContent = 'done (' + backwardScanned + ' pages)';
+    bwdInfo.textContent = 'done (' + backwardScanned + ' pgs)';
     bwdInfo.className = 'dir-info done';
     statsText.textContent = (forwardScanned + backwardScanned) + ' scanned · ' + (path.length - 1) + ' steps';
     youStatus.classList.add('hidden');
