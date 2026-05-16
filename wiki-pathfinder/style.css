@@ -174,3 +174,28 @@ button {
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 4px; }
 @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.35; } }
+
+/* ── Wiki search bar ── */
+#wiki-title-bar {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+}
+#wiki-title-text { font-weight: 600; }
+#wiki-search-wrap { position: relative; flex-shrink: 0; }
+#wikiSearch {
+  background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  padding: 5px 10px; font-size: 0.78rem; width: 220px; color: #222;
+  outline: none; font-family: sans-serif;
+}
+#wikiSearch:focus { border-color: #4a90d9; box-shadow: 0 0 0 2px rgba(74,144,217,0.15); }
+#wikiSearchSuggestions {
+  position: absolute; top: calc(100% + 2px); left: 0; right: 0;
+  background: #fff; border: 1px solid #ccc; border-radius: 6px;
+  list-style: none; max-height: 250px; overflow-y: auto;
+  z-index: 200; display: none; box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+}
+#wikiSearchSuggestions.active { display: block; }
+#wikiSearchSuggestions li {
+  padding: 8px 12px; cursor: pointer; font-size: 0.82rem;
+  border-bottom: 1px solid #eee; color: #333; font-family: sans-serif;
+}
+#wikiSearchSuggestions li:hover { background: #e8f0fe; color: #0645ad; }
